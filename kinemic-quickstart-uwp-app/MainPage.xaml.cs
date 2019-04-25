@@ -13,18 +13,60 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 
-// Die Elementvorlage "Leere Seite" wird unter https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x407 dokumentiert.
+using Kinemic.Gesture;
 
 namespace kinemic_quickstart_uwp_app
 {
-    /// <summary>
-    /// Eine leere Seite, die eigenständig verwendet oder zu der innerhalb eines Rahmens navigiert werden kann.
-    /// </summary>
+
     public sealed partial class MainPage : Page
     {
+        // our handle to the shared engine
+        private Engine engine;
+
+        // the current band
+        private String band;
+
         public MainPage()
         {
             this.InitializeComponent();
+
+            // get the shared engine instance
+            this.engine = Engine.Default;
+
+            // register event handlers
+            this.engine.ConnectionStateChanged += Engine_ConnectionStateChanged;
+            this.engine.GestureDetected += Engine_GestureDetected;
         }
+
+        override protected void OnNavigatedTo(NavigationEventArgs e)
+        {
+            // connect to the nearest Kinemic Band
+            engine.ConnectStrongest();
+        }
+
+        override protected void OnNavigatingFrom(NavigatingCancelEventArgs e)
+        {
+            // disconnect our Kinemic Band
+            if (band != null) engine.Disconnect(band);
+        }
+
+        private void Engine_ConnectionStateChanged(Engine sender, ConnectionStateChangedEventArgs e)
+        {
+            // remember the current band we interact with
+            band = e.Band;
+            
+            // show a message on screen when connection state changes
+            TextBlock.Text = e.Band.Substring(0, 5).ToUpper() + " - Connection state: " + e.State.ToString();
+        }
+
+        private void Engine_GestureDetected(Engine sender, GestureDetectedEventArgs e)
+        {
+            // show a message on screen for each gesture event
+            TextBlock.Text = e.Band.Substring(0, 5).ToUpper() + " - Detected gesture: " + e.Gesture.ToString();
+
+            // give haptic feedback for every gesture
+            this.engine.Vibrate(e.Band, 300);
+        }
+
     }
 }
